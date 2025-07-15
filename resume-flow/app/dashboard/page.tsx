@@ -4,6 +4,7 @@ import { useAuth } from '../../lib/auth-context';
 import { useEffect, useState } from 'react';
 import { getUserResumes, getUserInterviewSessions, Resume, InterviewSession } from '../../lib/firestore';
 import ResumeUpload from '../../components/resume/ResumeUpload';
+import ResumeAnalysisResults from '../../components/resume/ResumeAnalysisResults';
 
 export default function Dashboard() {
     const { user, loading, logout } = useAuth();
@@ -11,6 +12,8 @@ export default function Dashboard() {
     const [sessions, setSessions] = useState<InterviewSession[]>([]);
     const [loadingData, setLoadingData] = useState(true);
     const [showUpload, setShowUpload] = useState(false);
+    const [analysisResult, setAnalysisResult] = useState<any>(null);
+    const [analyzing, setAnalyzing] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -189,20 +192,18 @@ export default function Dashboard() {
                                                 )}
                                                 {resume.analysisScore && (
                                                     <div className="text-right">
-                                                        <div className={`text-lg font-semibold ${
-                                                            resume.analysisScore >= 80 ? 'text-green-600' :
+                                                        <div className={`text-lg font-semibold ${resume.analysisScore >= 80 ? 'text-green-600' :
                                                             resume.analysisScore >= 60 ? 'text-yellow-600' : 'text-red-600'
-                                                        }`}>
+                                                            }`}>
                                                             {resume.analysisScore}
                                                         </div>
                                                         <div className="text-xs text-slate-500">/ 100</div>
                                                     </div>
                                                 )}
-                                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                                    resume.status === 'analyzed' ? 'bg-green-100 text-green-800' :
+                                                <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${resume.status === 'analyzed' ? 'bg-green-100 text-green-800' :
                                                     resume.status === 'analyzing' ? 'bg-blue-100 text-blue-800' :
-                                                    'bg-slate-100 text-slate-800'
-                                                }`}>
+                                                        'bg-slate-100 text-slate-800'
+                                                    }`}>
                                                     {resume.status}
                                                 </span>
                                             </div>
@@ -263,11 +264,10 @@ export default function Dashboard() {
                                                 <p className="text-sm font-medium text-slate-900 truncate">{session.jobTitle}</p>
                                                 <p className="text-sm text-slate-500">{session.industry} • {session.experienceLevel}</p>
                                             </div>
-                                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                                                session.status === 'completed' ? 'bg-green-100 text-green-800' :
+                                            <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${session.status === 'completed' ? 'bg-green-100 text-green-800' :
                                                 session.status === 'active' ? 'bg-blue-100 text-blue-800' :
-                                                'bg-slate-100 text-slate-800'
-                                            }`}>
+                                                    'bg-slate-100 text-slate-800'
+                                                }`}>
                                                 {session.status}
                                             </span>
                                         </div>
@@ -286,15 +286,36 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                </div>
-
                 {/* Resume Upload Form */}
-                {showUpload && (
+                {showUpload && !analysisResult && (
                     <div className="mt-8">
                         <ResumeUpload
                             onUploadComplete={() => {
                                 setShowUpload(false);
-                                loadUserData(); // Refresh the data
+                            }}
+                            onAnalysisComplete={(result, fileName, jobTitle, industry) => {
+                                setAnalysisResult({
+                                    result,
+                                    fileName,
+                                    jobTitle,
+                                    industry
+                                });
+                                setShowUpload(false);
+                            }}
+                        />
+                    </div>
+                )}
+
+                {/* Analysis Results Display */}
+                {analysisResult && (
+                    <div className="mt-8">
+                        <ResumeAnalysisResults
+                            result={analysisResult.result}
+                            fileName={analysisResult.fileName}
+                            jobTitle={analysisResult.jobTitle}
+                            industry={analysisResult.industry}
+                            onClose={() => {
+                                setAnalysisResult(null);
                             }}
                         />
                     </div>

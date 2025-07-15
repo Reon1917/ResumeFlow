@@ -6,9 +6,10 @@ import { createResume } from '../../lib/firestore';
 
 interface ResumeUploadProps {
   onUploadComplete?: () => void;
+  onAnalysisComplete?: (result: any, fileName: string, jobTitle: string, industry: string) => void;
 }
 
-export default function ResumeUpload({ onUploadComplete }: ResumeUploadProps) {
+export default function ResumeUpload({ onUploadComplete, onAnalysisComplete }: ResumeUploadProps) {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [jobTitle, setJobTitle] = useState('');
@@ -40,29 +41,18 @@ export default function ResumeUpload({ onUploadComplete }: ResumeUploadProps) {
     setUploading(true);
 
     try {
-      // Create initial resume record
-      const resumeId = await createResume({
-        userId: user.uid,
-        fileName: file.name,
-        fileUrl: '', // No file storage needed
-        jobTitle,
-        industry,
-        status: 'analyzing'
-      });
-
-      console.log('📄 Resume record created:', resumeId);
+      console.log('📄 Starting resume analysis (no database storage)');
 
       // Convert file to base64 for AI processing
       const fileData = await fileToBase64(file);
       
-      // Send to AI API for analysis
-      const response = await fetch('/api/gemini/analyze-resume', {
+      // Send directly to AI API for analysis (bypass Firestore)
+      const response = await fetch('/api/gemini/analyze-resume-direct', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          resumeId,
           fileName: file.name,
           fileData,
           fileType: file.type,
@@ -78,6 +68,9 @@ export default function ResumeUpload({ onUploadComplete }: ResumeUploadProps) {
       const result = await response.json();
       console.log('🤖 AI Analysis Result:', result);
 
+      // Pass results directly to dashboard
+      onAnalysisComplete?.(result.data, file.name, jobTitle, industry);
+
       // Reset form
       setJobTitle('');
       setIndustry('');
@@ -85,11 +78,10 @@ export default function ResumeUpload({ onUploadComplete }: ResumeUploadProps) {
         fileInputRef.current.value = '';
       }
 
-      alert('Resume uploaded and analysis started!');
       onUploadComplete?.();
     } catch (error) {
       console.error('❌ Upload error:', error);
-      alert('Failed to upload resume. Please try again.');
+      alert('Failed to analyze resume. Please try again.');
     } finally {
       setUploading(false);
     }
