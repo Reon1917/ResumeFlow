@@ -12,17 +12,17 @@ export const useApiCost = () => {
 
   const logCostAnalysis = useCallback((tokenUsage: TokenUsage) => {
     const cost = calculateCost(tokenUsage);
-    
+
     console.log('💰 API Cost Analysis:');
     console.log(`📥 Input tokens: ${tokenUsage.inputTokens.toLocaleString()} | Cost: $${cost.inputCost.toFixed(6)}`);
     console.log(`📤 Output tokens: ${tokenUsage.outputTokens.toLocaleString()} | Cost: $${cost.outputCost.toFixed(6)}`);
     console.log(`💵 Total cost for processing: $${cost.totalCost.toFixed(6)}`);
     console.log('ℹ️  Note: Currently on free tier, but showing what it would cost on paid tier');
-    
+
     // Update session totals
     setTotalSessionCost(prev => prev + cost.totalCost);
     setRequestCount(prev => prev + 1);
-    
+
     return cost;
   }, [calculateCost]);
 
