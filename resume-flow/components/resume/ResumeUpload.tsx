@@ -8,9 +8,10 @@ interface ResumeUploadProps {
   onUploadComplete?: () => void;
   onAnalysisComplete?: (result: any, fileName: string, jobTitle: string, industry: string) => void;
   onProcessingStart?: () => void;
+  onError?: () => void;
 }
 
-export default function ResumeUpload({ onUploadComplete, onAnalysisComplete, onProcessingStart }: ResumeUploadProps) {
+export default function ResumeUpload({ onUploadComplete, onAnalysisComplete, onProcessingStart, onError }: ResumeUploadProps) {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [jobTitle, setJobTitle] = useState('');
@@ -91,7 +92,23 @@ export default function ResumeUpload({ onUploadComplete, onAnalysisComplete, onP
       onUploadComplete?.();
     } catch (error) {
       console.error('❌ Upload error:', error);
-      alert('Failed to analyze resume. Please try again.');
+      
+      // Reset processing state on error
+      onError?.();
+      
+      // Show user-friendly error message
+      let errorMessage = 'Failed to analyze resume. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('Failed to extract text')) {
+          errorMessage = 'Could not extract text from the PDF. Please ensure the file is not corrupted or password-protected.';
+        } else if (error.message.includes('Failed to parse PDF')) {
+          errorMessage = 'Invalid PDF file. Please try uploading a different PDF.';
+        } else if (error.message.includes('AI analysis service')) {
+          errorMessage = 'AI analysis service is temporarily unavailable. Please try again in a few minutes.';
+        }
+      }
+      
+      alert(errorMessage);
     } finally {
       setUploading(false);
     }
