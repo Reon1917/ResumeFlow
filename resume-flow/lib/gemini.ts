@@ -1,4 +1,5 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { estimateTokenCount, logTokenCostAnalysis } from './utils/tokenUtils';
 
 if (!process.env.GEMINI_API_KEY) {
     throw new Error('GEMINI_API_KEY is not set in environment variables');
@@ -7,7 +8,7 @@ if (!process.env.GEMINI_API_KEY) {
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const model = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash-exp',
+    model: 'gemini-2.5-flash-lite-preview-06-17',
     generationConfig: {
         temperature: 0.7,
         topK: 40,
@@ -99,13 +100,28 @@ Output Format: Valid JSON only, no additional text:
         console.log('🤖 Sending resume analysis request to Gemini API...');
         console.log('📊 Analysis parameters:', { jobTitle, industry, contentLength: resumeContent.length });
 
+        // Estimate input tokens
+        const inputTokens = estimateTokenCount(prompt);
+        console.log('📥 Estimated input tokens:', inputTokens.toLocaleString());
+
         const result = await model.generateContent(prompt);
         const response = result.response;
         const text = response.text();
 
+        // Estimate output tokens
+        const outputTokens = estimateTokenCount(text);
+        const totalTokens = inputTokens + outputTokens;
+
         console.log('✅ Gemini API response received');
         console.log('📝 Raw response length:', text.length);
         console.log('🔍 Raw response preview:', text.substring(0, 200) + '...');
+
+        // Log cost analysis using the utility function
+        logTokenCostAnalysis({
+            inputTokens,
+            outputTokens,
+            totalTokens
+        });
 
         // Clean the response to ensure it's valid JSON
         const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
@@ -187,9 +203,21 @@ Output Format: Valid JSON only, no additional text:
     try {
         console.log('🎯 Generating interview questions for:', { jobTitle, industry, experienceLevel });
 
+        // Estimate input tokens
+        const inputTokens = estimateTokenCount(prompt);
+        console.log('📥 Estimated input tokens:', inputTokens.toLocaleString());
+
         const result = await model.generateContent(prompt);
         const response = result.response;
         const text = response.text();
+
+        // Estimate output tokens and log cost analysis
+        const outputTokens = estimateTokenCount(text);
+        logTokenCostAnalysis({
+            inputTokens,
+            outputTokens,
+            totalTokens: inputTokens + outputTokens
+        });
 
         console.log('✅ Interview questions response received');
         console.log('📝 Response length:', text.length);
@@ -253,9 +281,21 @@ Output Format: Valid JSON only, no additional text:
         console.log('🎤 Evaluating interview response for:', { jobTitle, questionCategory });
         console.log('📝 Response length:', response.length);
 
+        // Estimate input tokens
+        const inputTokens = estimateTokenCount(prompt);
+        console.log('📥 Estimated input tokens:', inputTokens.toLocaleString());
+
         const result = await model.generateContent(prompt);
         const response_result = result.response;
         const text = response_result.text();
+
+        // Estimate output tokens and log cost analysis
+        const outputTokens = estimateTokenCount(text);
+        logTokenCostAnalysis({
+            inputTokens,
+            outputTokens,
+            totalTokens: inputTokens + outputTokens
+        });
 
         console.log('✅ Interview evaluation response received');
         console.log('📊 Response length:', text.length);

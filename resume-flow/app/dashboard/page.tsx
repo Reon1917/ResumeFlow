@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { getUserResumes, getUserInterviewSessions, Resume, InterviewSession } from '../../lib/firestore';
 import ResumeUpload from '../../components/resume/ResumeUpload';
 import ResumeAnalysisResults from '../../components/resume/ResumeAnalysisResults';
+import AIProcessingSteps from '../../components/ui/AIProcessingSteps';
 
 export default function Dashboard() {
     const { user, loading, logout } = useAuth();
@@ -14,6 +15,7 @@ export default function Dashboard() {
     const [showUpload, setShowUpload] = useState(false);
     const [analysisResult, setAnalysisResult] = useState<any>(null);
     const [analyzing, setAnalyzing] = useState(false);
+    const [processingSteps, setProcessingSteps] = useState(false);
 
     useEffect(() => {
         if (user) {
@@ -97,7 +99,7 @@ export default function Dashboard() {
                             </div>
                             <div className="ml-4">
                                 <p className="text-sm font-medium text-slate-600">Total Resumes</p>
-                                <p className="text-2xl font-semibold text-slate-900">{resumes.length}</p>
+                                <p className="text-2xl font-semibold text-slate-900">{resumes.filter(r => r.status !== 'analyzing').length}</p>
                             </div>
                         </div>
                     </div>
@@ -168,9 +170,9 @@ export default function Dashboard() {
                                         </div>
                                     ))}
                                 </div>
-                            ) : resumes.length > 0 ? (
+                            ) : resumes.filter(r => r.status !== 'analyzing').length > 0 ? (
                                 <div className="space-y-4">
-                                    {resumes.slice(0, 3).map((resume) => (
+                                    {resumes.filter(r => r.status !== 'analyzing').slice(0, 3).map((resume) => (
                                         <div key={resume.id} className="flex items-center space-x-4 p-4 border border-slate-200 rounded-lg hover:border-slate-300 transition-colors">
                                             <div className="flex-shrink-0">
                                                 <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center">
@@ -286,8 +288,20 @@ export default function Dashboard() {
                     </div>
                 </div>
 
+                {/* AI Processing Steps */}
+                {processingSteps && (
+                    <div className="mt-8">
+                        <AIProcessingSteps
+                            isProcessing={processingSteps}
+                            onComplete={() => {
+                                setProcessingSteps(false);
+                            }}
+                        />
+                    </div>
+                )}
+
                 {/* Resume Upload Form */}
-                {showUpload && !analysisResult && (
+                {showUpload && !analysisResult && !processingSteps && (
                     <div className="mt-8">
                         <ResumeUpload
                             onUploadComplete={() => {
@@ -301,6 +315,10 @@ export default function Dashboard() {
                                     industry
                                 });
                                 setShowUpload(false);
+                                setProcessingSteps(false);
+                            }}
+                            onProcessingStart={() => {
+                                setProcessingSteps(true);
                             }}
                         />
                     </div>

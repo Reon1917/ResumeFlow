@@ -7,9 +7,10 @@ import { createResume } from '../../lib/firestore';
 interface ResumeUploadProps {
   onUploadComplete?: () => void;
   onAnalysisComplete?: (result: any, fileName: string, jobTitle: string, industry: string) => void;
+  onProcessingStart?: () => void;
 }
 
-export default function ResumeUpload({ onUploadComplete, onAnalysisComplete }: ResumeUploadProps) {
+export default function ResumeUpload({ onUploadComplete, onAnalysisComplete, onProcessingStart }: ResumeUploadProps) {
   const { user } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [jobTitle, setJobTitle] = useState('');
@@ -43,8 +44,14 @@ export default function ResumeUpload({ onUploadComplete, onAnalysisComplete }: R
     try {
       console.log('📄 Starting resume analysis (no database storage)');
 
+      // Trigger the processing steps animation
+      onProcessingStart?.();
+
       // Convert file to base64 for AI processing
       const fileData = await fileToBase64(file);
+      
+      // Add a small delay to let the processing steps animation start
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
       // Send directly to AI API for analysis (bypass Firestore)
       const response = await fetch('/api/gemini/analyze-resume-direct', {
@@ -67,6 +74,9 @@ export default function ResumeUpload({ onUploadComplete, onAnalysisComplete }: R
 
       const result = await response.json();
       console.log('🤖 AI Analysis Result:', result);
+
+      // Add a small delay to let the processing steps complete their animation
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Pass results directly to dashboard
       onAnalysisComplete?.(result.data, file.name, jobTitle, industry);
