@@ -41,7 +41,7 @@ export default function CTASection() {
         <div className="mb-8">
           <Link
             href="/login"
-            className="inline-block bg-white text-indigo-600 px-10 py-4 rounded-lg text-xl font-bold hover:bg-gray-50 transition-colors shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
+            className="inline-block bg-white text-indigo-600 px-10 py-4 rounded-lg text-xl font-bold hover:bg-gray-50 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all duration-200"
           >
             Start Your Free Analysis
           </Link>

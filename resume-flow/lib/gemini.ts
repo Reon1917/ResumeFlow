@@ -1,60 +1,60 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY is not set in environment variables');
+    throw new Error('GEMINI_API_KEY is not set in environment variables');
 }
 
-const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const model = genAI.getGenerativeModel({
-  model: 'gemini-2.5-flash-exp',
-  generationConfig: {
-    temperature: 0.7,
-    topK: 40,
-    topP: 0.95,
-    maxOutputTokens: 8192,
-  }
+    model: 'gemini-2.0-flash-exp',
+    generationConfig: {
+        temperature: 0.7,
+        topK: 40,
+        topP: 0.95,
+        maxOutputTokens: 8192,
+    }
 });
 
 export interface ResumeAnalysisResult {
-  overallScore: number;
-  sectionScores: {
-    content: number;
-    structure: number;
-    impact: number;
-    keywords: number;
-    presentation: number;
-  };
-  strengths: string[];
-  improvements: string[];
-  recommendations: string[];
-  atsCompatibility: {
-    score: number;
-    issues: string[];
-  };
+    overallScore: number;
+    sectionScores: {
+        content: number;
+        structure: number;
+        impact: number;
+        keywords: number;
+        presentation: number;
+    };
+    strengths: string[];
+    improvements: string[];
+    recommendations: string[];
+    atsCompatibility: {
+        score: number;
+        issues: string[];
+    };
 }
 
 export interface InterviewQuestion {
-  id: string;
-  text: string;
-  category: 'technical' | 'behavioral' | 'situational';
-  difficulty: 'easy' | 'medium' | 'hard';
+    id: string;
+    text: string;
+    category: 'technical' | 'behavioral' | 'situational';
+    difficulty: 'easy' | 'medium' | 'hard';
 }
 
 export interface ResponseEvaluation {
-  score: number;
-  strengths: string[];
-  improvements: string[];
-  suggestions: string[];
-  exampleResponse: string;
+    score: number;
+    strengths: string[];
+    improvements: string[];
+    suggestions: string[];
+    exampleResponse: string;
 }
 
 export const analyzeResume = async (
-  resumeContent: string,
-  jobTitle: string,
-  industry: string
+    resumeContent: string,
+    jobTitle: string,
+    industry: string
 ): Promise<ResumeAnalysisResult> => {
-  const prompt = `
+    const prompt = `
 Role: Expert resume analyzer and career coach with 15+ years of experience in recruitment and talent acquisition.
 
 Task: Analyze the following resume for a ${jobTitle} position in the ${industry} industry. Provide comprehensive feedback with specific, actionable recommendations.
@@ -95,31 +95,53 @@ Output Format: Valid JSON only, no additional text:
 }
 `;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    // Clean the response to ensure it's valid JSON
-    const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
-    return JSON.parse(cleanedText);
-  } catch (error) {
-    console.error('Error analyzing resume:', error);
-    throw new Error('Failed to analyze resume');
-  }
+    try {
+        console.log('🤖 Sending resume analysis request to Gemini API...');
+        console.log('📊 Analysis parameters:', { jobTitle, industry, contentLength: resumeContent.length });
+
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const text = response.text();
+
+        console.log('✅ Gemini API response received');
+        console.log('📝 Raw response length:', text.length);
+        console.log('🔍 Raw response preview:', text.substring(0, 200) + '...');
+
+        // Clean the response to ensure it's valid JSON
+        const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
+        console.log('🧹 Cleaned response preview:', cleanedText.substring(0, 200) + '...');
+
+        const parsedResult = JSON.parse(cleanedText);
+        console.log('✅ Successfully parsed JSON response');
+        console.log('📈 Analysis results:', {
+            overallScore: parsedResult.overallScore,
+            strengthsCount: parsedResult.strengths?.length || 0,
+            improvementsCount: parsedResult.improvements?.length || 0,
+            recommendationsCount: parsedResult.recommendations?.length || 0,
+            atsScore: parsedResult.atsCompatibility?.score || 0
+        });
+
+        return parsedResult;
+    } catch (error) {
+        console.error('❌ Error analyzing resume:', error);
+        if (error instanceof SyntaxError) {
+            console.error('🔧 JSON parsing error - raw response may be malformed');
+        }
+        throw new Error('Failed to analyze resume');
+    }
 };
 
 export const generateInterviewQuestions = async (
-  jobTitle: string,
-  industry: string,
-  experienceLevel: string,
-  resumeContent?: string
+    jobTitle: string,
+    industry: string,
+    experienceLevel: string,
+    resumeContent?: string
 ): Promise<{
-  technical: InterviewQuestion[];
-  behavioral: InterviewQuestion[];
-  situational: InterviewQuestion[];
+    technical: InterviewQuestion[];
+    behavioral: InterviewQuestion[];
+    situational: InterviewQuestion[];
 }> => {
-  const prompt = `
+    const prompt = `
 Role: Senior technical recruiter and interview specialist with expertise in ${industry} industry.
 
 Task: Generate comprehensive interview questions for a ${jobTitle} position targeting ${experienceLevel} level candidates.
@@ -162,26 +184,39 @@ Output Format: Valid JSON only, no additional text:
 }
 `;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
-    
-    const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
-    return JSON.parse(cleanedText);
-  } catch (error) {
-    console.error('Error generating interview questions:', error);
-    throw new Error('Failed to generate interview questions');
-  }
+    try {
+        console.log('🎯 Generating interview questions for:', { jobTitle, industry, experienceLevel });
+
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const text = response.text();
+
+        console.log('✅ Interview questions response received');
+        console.log('📝 Response length:', text.length);
+
+        const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
+        const parsedResult = JSON.parse(cleanedText);
+
+        console.log('📋 Generated questions:', {
+            technicalCount: parsedResult.technical?.length || 0,
+            behavioralCount: parsedResult.behavioral?.length || 0,
+            situationalCount: parsedResult.situational?.length || 0
+        });
+
+        return parsedResult;
+    } catch (error) {
+        console.error('❌ Error generating interview questions:', error);
+        throw new Error('Failed to generate interview questions');
+    }
 };
 
 export const evaluateInterviewResponse = async (
-  question: string,
-  response: string,
-  jobTitle: string,
-  questionCategory: string
+    question: string,
+    response: string,
+    jobTitle: string,
+    questionCategory: string
 ): Promise<ResponseEvaluation> => {
-  const prompt = `
+    const prompt = `
 Role: Expert interview coach and assessment specialist.
 
 Task: Evaluate the candidate's interview response for a ${jobTitle} position.
@@ -214,15 +249,30 @@ Output Format: Valid JSON only, no additional text:
 }
 `;
 
-  try {
-    const result = await model.generateContent(prompt);
-    const response_result = await result.response;
-    const text = response_result.text();
-    
-    const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
-    return JSON.parse(cleanedText);
-  } catch (error) {
-    console.error('Error evaluating interview response:', error);
-    throw new Error('Failed to evaluate interview response');
-  }
+    try {
+        console.log('🎤 Evaluating interview response for:', { jobTitle, questionCategory });
+        console.log('📝 Response length:', response.length);
+
+        const result = await model.generateContent(prompt);
+        const response_result = result.response;
+        const text = response_result.text();
+
+        console.log('✅ Interview evaluation response received');
+        console.log('📊 Response length:', text.length);
+
+        const cleanedText = text.replace(/```json\n?|\n?```/g, '').trim();
+        const parsedResult = JSON.parse(cleanedText);
+
+        console.log('📈 Evaluation results:', {
+            score: parsedResult.score,
+            strengthsCount: parsedResult.strengths?.length || 0,
+            improvementsCount: parsedResult.improvements?.length || 0,
+            suggestionsCount: parsedResult.suggestions?.length || 0
+        });
+
+        return parsedResult;
+    } catch (error) {
+        console.error('❌ Error evaluating interview response:', error);
+        throw new Error('Failed to evaluate interview response');
+    }
 };
